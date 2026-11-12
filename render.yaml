@@ -1,0 +1,40 @@
+# Render Blueprint — Dispute Compass (Option C: prebuilt deploy)
+#
+# WHY NO BUILD HERE: `next build` needs ~1.4–2.3 GB RAM (measured); Render's
+# FREE plan provides 512 MB, so building here gets OOM-killed → HTTP 502.
+# The finished app only runs in ~94 MB. GitHub Actions builds the app and
+# publishes the finished standalone output to the `deploy` branch; Render
+# only RUNS that artifact.
+#
+# Deploy: Render Dashboard → New → Web Service → pick this repository
+#         → select the `deploy` branch → keep Build Command EMPTY
+#         → Start Command: node .next/standalone/server.js
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: dispute-compass
+    runtime: node
+    plan: free
+    branch: deploy                     # the branch holding the prebuilt bundle
+    buildCommand: "true"               # no-op — NEVER run next build on Render (512 MB OOM)
+    startCommand: node .next/standalone/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true                   # redeploy whenever the deploy branch updates
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: PAYPAL_CLIENT_ID
+        sync: false # optional — PayPal Sandbox Client ID; Demo Mode works without
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false # optional — PayPal Sandbox Secret
+      - key: PAYPAL_BASE_URL
+        value: https://api-m.sandbox.paypal.com
+      - key: LLM_API_KEY
+        sync: false # optional — NVIDIA NIM or any OpenAI-compatible key
+      - key: LLM_BASE_URL
+        value: https://integrate.api.nvidia.com/v1
+      - key: LLM_MODEL
+        value: nvidia/nemotron-3.5-super-vl-120b-a12b

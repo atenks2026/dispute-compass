@@ -1,0 +1,72 @@
+# Dispute Compass — build on GitHub Actions, run on Render (Option C)
+#
+# WHY THIS WORKFLOW EXISTS
+# `next build` needs ~1.4–2.3 GB RAM (measured). Render's FREE plan only
+# provides 512 MB, so building on Render gets OOM-killed and the URL returns
+# HTTP 502. The finished app, however, only needs ~94 MB at runtime.
+#
+# STRATEGY (Option C): build here on GitHub Actions (runners have 7 GB RAM),
+# publish the finished standalone output to the `deploy` branch, and let
+# Render run that artifact with NO build step.
+#
+# FLOW
+#   push to main → this workflow → `deploy` branch updated → Render auto-deploys
+#
+# Render service settings (set ONCE in the Render dashboard):
+#   Branch:        deploy
+#   Build Command: (leave EMPTY — never build on Render)
+#   Start Command: node .next/standalone/server.js
+
+name: Build & publish prebuilt bundle to deploy branch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # allows a manual "Run workflow" from the Actions tab
+
+permissions:
+  contents: write # needed to push the deploy branch
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest # 7 GB RAM — plenty for next build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun (project uses bun.lock)
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client (only if this project uses Prisma)
+        run: |
+          if [ -f prisma/schema.prisma ]; then
+            bunx prisma generate
+          else
+            echo "No prisma schema — skipping."
+          fi
+
+      - name: Build Next.js (standalone output)
+        run: bun run build
+
+      - name: Ensure static & public live inside the standalone bundle
+        run: |
+          mkdir -p .next/standalone/.next
+          [ -d .next/standalone/.next/static ] || cp -r .next/static .next/standalone/.next/static
+          [ -d .next/standalone/public ] || cp -r public .next/standalone/public
+
+      - name: Publish bundle to the deploy branch
+        run: |
+          rm -rf /tmp/bundle
+          mkdir -p /tmp/bundle/.next
+          cp -r .next/standalone /tmp/bundle/.next/standalone
+          cd /tmp/bundle
+          git init -q -b deploy
+          git add -A -f
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Prebuilt bundle from commit $GITHUB_SHA"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git push -q --force origin deploy
