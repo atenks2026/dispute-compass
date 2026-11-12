@@ -281,6 +281,7 @@ export function LetterStudio({ dispute, checks, onSent, onInsertPolicy, onPolicy
               {kind === 'APPEAL' ? 'Submit appeal' : kind === 'OFFER_NOTE' ? 'Send offer' : 'Send message'}
             </Button>
             {!allAttested && <p className="text-center text-[11px] text-muted-foreground">All three attestations are required to enable sending.</p>}
+            <p className="text-[10px] text-muted-foreground italic mt-2">Not an official PayPal product — not legal advice. You are solely responsible for your send/settle decision. PayPal's decision is final.</p>
 
             {result && (
               <div className={`rounded-md border p-3 text-xs ${result.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-red-300 bg-red-50 text-red-900'}`}>
