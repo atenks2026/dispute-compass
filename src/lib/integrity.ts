@@ -53,6 +53,40 @@ const RULES: Rule[] = [
   },
 ];
 
+/** PII redaction patterns — never send raw personal data to PayPal or in logs. */
+const PII_PATTERNS: [RegExp, string][] = [
+  [/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[EMAIL]'],
+  [/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g, '[PHONE]'],
+  [/\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b/g, '[CARD_NUMBER]'],
+  [/\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b/g, '[SSN]'],
+];
+
+export function redactPII(text: string): string {
+  let result = text;
+  for (const [pattern, replacement] of PII_PATTERNS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
+export interface ScanResult {
+  redactedText: string;
+  findings: IntegrityFinding[];
+  hasBlocker: boolean;
+  hasWarning: boolean;
+}
+
+export function scanAndRedact(text: string, checks: EvidenceCheck[] = []): ScanResult {
+  const redacted = redactPII(text);
+  const findings = scanIntegrity(redacted, checks);
+  return {
+    redactedText: redacted,
+    findings,
+    hasBlocker: findings.some((f) => f.severity === 'BLOCKER'),
+    hasWarning: findings.some((f) => f.severity === 'WARNING'),
+  };
+}
+
 export function scanIntegrity(text: string, checks: EvidenceCheck[] = []): IntegrityFinding[] {
   const findings: IntegrityFinding[] = [];
   for (const rule of RULES) {

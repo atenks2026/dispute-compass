@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { paypalConfigured, sendAction, type SendAction } from '@/lib/paypal-client';
 import { demoSendLog, mutateDemo } from '@/lib/demo-store';
-import { scanIntegrity } from '@/lib/integrity';
-import type { SendActionResponse } from '@/lib/types';
+import { scanIntegrity, redactPII, scanAndRedact, type ScanResult } from '@/lib/integrity';
+import type { SendActionResponse, EvidenceCheck } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ const ACTIONS: SendAction[] = ['SEND_MESSAGE', 'MAKE_OFFER', 'APPEAL', 'ACCEPT_C
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let body: { action?: string; message?: string; offerAmount?: { currency: string; value: string }; confirmationsAccepted?: boolean } = {};
+  let body: { action?: string; message?: string; offerAmount?: { currency: string; value: string }; confirmationsAccepted?: boolean; checks?: EvidenceCheck[] } = {};
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -31,13 +31,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const message = body.message || '';
-  const blockers = scanIntegrity(message).filter((f) => f.severity === 'BLOCKER');
+  const checks = body.checks ?? [];
+  const { redactedText, findings } = scanAndRedact(message, checks);
+  const blockers = findings.filter((f) => f.severity === 'BLOCKER');
   if (blockers.length > 0 && !body.confirmationsAccepted) {
     return NextResponse.json(
       {
         error: 'INTEGRITY_BLOCKED',
         detail: 'The draft contains absolute claims that must be verified. Confirm the attestations to proceed, or edit the draft.',
         blockers,
+        redactedText,
       },
       { status: 422 },
     );
@@ -47,9 +50,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if (paypalConfigured() && !id.startsWith('PP-D-27')) {
     try {
-      const paypalResponse = await sendAction({ action, disputeId: id, message, offerAmount: body.offerAmount });
+      const paypalResponse = await sendAction({ action, disputeId: id, message: redactedText, offerAmount: body.offerAmount });
       demoSendLog.push({ at: now, disputeId: id, action, note: 'sent to PayPal Sandbox' });
-      const payload: SendActionResponse = { ok: true, action, mode: 'LIVE_SANDBOX', paypalResponse, recordedAt: now };
+      const payload: SendActionResponse = { ok: true, action, mode: 'LIVE_SANDBOX', paypalResponse, recordedAt: now, redactedText };
       return NextResponse.json(payload);
     } catch (err) {
       const payload: SendActionResponse = {
@@ -58,6 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         mode: 'LIVE_SANDBOX',
         error: err instanceof Error ? err.message : 'PayPal API error',
         recordedAt: now,
+        redactedText,
       };
       return NextResponse.json(payload, { status: 502 });
     }
@@ -65,23 +69,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   // Demo mode: mutate the in-memory copy so the demo feels real.
   mutateDemo(id, (d) => {
-    if (action === 'SEND_MESSAGE' && message) {
-      d.messages.push({ posted_by: d.actorRole, time: now, content: message });
+    if (action === 'SEND_MESSAGE' && redactedText) {
+      d.messages.push({ posted_by: d.actorRole, time: now, content: redactedText });
     }
     if (action === 'MAKE_OFFER') {
       d.messages.push({
         posted_by: d.actorRole,
         time: now,
-        content: `Offer sent through PayPal: ${body.offerAmount?.value || '?'} ${body.offerAmount?.currency || d.amount.currency} — ${message || 'see note'}`,
+        content: `Offer sent through PayPal: ${body.offerAmount?.value || '?'} ${body.offerAmount?.currency || d.amount.currency} — ${redactedText || 'see note'}`,
       });
       d.status = 'WAITING_FOR_BUYER_RESPONSE';
     }
     if (action === 'APPEAL') {
-      d.evidence.push({ evidence_type: 'APPEAL_SUBMISSION', notes: message.slice(0, 200), provided: true });
+      d.evidence.push({ evidence_type: 'APPEAL_SUBMISSION', notes: redactedText.slice(0, 200), provided: true });
       d.status = 'UNDER_REVIEW';
     }
     if (action === 'ACCEPT_CLAIM') {
-      d.messages.push({ posted_by: d.actorRole, time: now, content: `Claim accepted: ${message || 'no note'}` });
+      d.messages.push({ posted_by: d.actorRole, time: now, content: `Claim accepted: ${redactedText || 'no note'}` });
       d.status = 'CLOSED';
     }
     d.update_time = now;
@@ -94,6 +98,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     mode: 'DEMO',
     paypalResponse: { simulated: true, info: 'Demo Mode: action recorded locally. Configure PAYPAL_CLIENT_ID/SECRET to send to the real sandbox.' },
     recordedAt: now,
+    redactedText,
   };
   return NextResponse.json(payload);
 }

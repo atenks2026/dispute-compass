@@ -234,4 +234,5 @@ export interface SendActionResponse {
   paypalResponse?: unknown;
   error?: string;
   recordedAt: string;
+  redactedText?: string;
 }
