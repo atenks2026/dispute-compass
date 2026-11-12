@@ -124,6 +124,7 @@ export function LetterStudio({ dispute, checks, onSent, onInsertPolicy, onPolicy
           message: `Subject: ${editedSubject}\n\n${editedBody}`,
           offerAmount: kind === 'OFFER_NOTE' && offerAmount ? { currency: dispute.amount.currency, value: offerAmount } : undefined,
           confirmationsAccepted: allAttested,
+          checks,
         }),
       });
       const json = (await res.json()) as SendActionResponse;
