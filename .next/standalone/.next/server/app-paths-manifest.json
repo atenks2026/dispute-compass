@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/disputes/[id]/analyze/route": "app/api/disputes/[id]/analyze/route.js",
+  "/api/disputes/[id]/letter/route": "app/api/disputes/[id]/letter/route.js",
+  "/api/disputes/[id]/route": "app/api/disputes/[id]/route.js",
+  "/api/disputes/[id]/send/route": "app/api/disputes/[id]/send/route.js",
+  "/api/disputes/route": "app/api/disputes/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/route": "app/api/route.js",
+  "/page": "app/page.js"
+}

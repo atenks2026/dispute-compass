@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/disputes/[id]/analyze/route": "/api/disputes/[id]/analyze",
+  "/api/disputes/[id]/letter/route": "/api/disputes/[id]/letter",
+  "/api/disputes/[id]/route": "/api/disputes/[id]",
+  "/api/disputes/[id]/send/route": "/api/disputes/[id]/send",
+  "/api/disputes/route": "/api/disputes",
+  "/api/health/route": "/api/health",
+  "/api/route": "/api",
+  "/page": "/"
+}
