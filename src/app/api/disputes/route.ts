@@ -16,6 +16,17 @@ export async function GET() {
   if (live) {
     try {
       const disputes = await listDisputes();
+      // If the sandbox has no disputes yet, fall back to demo data so the
+      // portfolio is not empty. Keep mode LIVE_SANDBOX so the badge stays
+      // honest about the connection, but show demo cases for the judge to try.
+      if (disputes.length === 0) {
+        const body: DisputeListResponse = {
+          disputes: demoDisputes(),
+          mode: 'LIVE_SANDBOX',
+          liveError: 'Sandbox connected but empty — showing demo cases',
+        };
+        return NextResponse.json(body);
+      }
       const body: DisputeListResponse = { disputes, mode: 'LIVE_SANDBOX' };
       return NextResponse.json(body);
     } catch (err) {
