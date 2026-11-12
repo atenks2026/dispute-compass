@@ -72,6 +72,7 @@ export function SettlementCard({ settlement, onPickOffer }: Props) {
             <li key={i}>{n}</li>
           ))}
         </ul>
+        <p className="text-[10px] text-muted-foreground italic">Heuristic case-strength score — not a prediction of outcome. Always verify against PayPal's actual review.</p>
       </CardContent>
     </Card>
   );

@@ -51,7 +51,7 @@ export function computeSettlement(dispute: Dispute, strengthScore: number): Sett
       winProbability: pWin,
       timeDays: 14,
       recommended: false,
-      rationale: `Evidence strength ${strengthScore}/100 → estimated win chance ${(pWin * 100).toFixed(0)}%; risk-adjusted cost ${fightCost.toFixed(2)} ${currency} plus ~2 weeks of attention.`,
+      rationale: `Evidence strength ${strengthScore}/100 → heuristic case-strength score (not a win probability). Risk-adjusted cost ${fightCost.toFixed(2)} ${currency} plus ~2 weeks of attention.`,
     },
   ];
 
@@ -68,7 +68,7 @@ export function computeSettlement(dispute: Dispute, strengthScore: number): Sett
   if (dispute.feeRefundEligible) {
     notes.push('Fee refund eligible: if you win, PayPal also returns the fixed fee — a real margin saver on small tickets.');
   }
-  notes.push('Win probability is derived from the evidence checklist score, not from an LLM guess — it updates as evidence changes.');
+  notes.push('Case-strength score is derived from the evidence checklist score, not from an LLM guess — it updates as evidence changes. Not a prediction of outcome.');
   if (dispute.stage === 'CHARGEBACK') {
     notes.push('Chargeback: offers do not apply; the paths are compelling evidence or accepting the chargeback.');
   }
