@@ -5,7 +5,7 @@ import { scanIntegrity } from '../src/lib/integrity';
 import { buildChecklist, scoreStrength } from '../src/lib/strength-meter';
 import type { Dispute } from '../src/lib/types';
 
-const now = new Date('2026-11-11T12:00:00Z');
+const now = new Date();
 const demo = buildDemoDisputes();
 
 describe('Deadline Engine (deterministic, rule-based)', () => {
